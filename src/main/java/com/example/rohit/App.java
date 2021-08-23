@@ -67,6 +67,7 @@ public class App {
 
 			row = sheet.createRow(rowIndex + 1);
 			XSSFFont font = setFont(workbook);
+			font.setFontHeightInPoints((short) 12);
 			XSSFCellStyle tableRowStyle = workbook.createCellStyle();
 			tableRowStyle.setFont(font);
 			XSSFCellStyle style = setHeaderStyle(workbook);
@@ -164,6 +165,7 @@ public class App {
 	private static XSSFCellStyle setHeaderStyle(XSSFWorkbook workbook) {
 		XSSFFont font = setFont(workbook);
 		font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+		font.setFontHeightInPoints((short) 12);
 		XSSFCellStyle style = workbook.createCellStyle();
 		style.setFont(font);
 		return style;
