@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
@@ -17,7 +18,6 @@ import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFDataFormat;
 import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import org.apache.poi.xssf.usermodel.XSSFFont;
-import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFTable;
@@ -30,8 +30,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  */
 public class App {
 
-	private static final int ROW_GAP = 20;
-	private static final int TABLE_SIZE = 16;
+	private static final int ROW_GAP = 30;
+	private static final int TABLE_SIZE = 25;
 
 	private static final String CREDITOR = "Creditor";
 	private static final String TABLE_STYLE = "TableStyleMedium2";
@@ -75,7 +75,6 @@ public class App {
 		XSSFCellStyle tableHeaderStyle = workbook.createCellStyle();
 		XSSFCellStyle dateCellStyle = workbook.createCellStyle();
 		XSSFCellStyle numberCellStyle = workbook.createCellStyle();
-		XSSFFormulaEvaluator formulaEvaluator = workbook.getCreationHelper().createFormulaEvaluator();
 		var validationHelper = new XSSFDataValidationHelper(sheet);
 		for (int i = 0; i < creditors.size(); i++) {
 			// Creditor name row
@@ -138,7 +137,7 @@ public class App {
 						if (k == TABLE_HEADERS.size() - 1) {
 							// SUM formula
 							cell.setCellFormula("SUM(" + D + (j + 1) + ":" + F + (j + 1) + ")");
-							formulaEvaluator.evaluateFormulaCell(cell);
+							cell.setCellType(CellType.FORMULA);
 						}
 					} else {
 						cell.setCellStyle(tableRowStyle);
