@@ -8,6 +8,7 @@ import java.util.List;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.CellReference;
@@ -219,6 +220,7 @@ public class App {
 		font.setColor(IndexedColors.WHITE.getIndex());
 		font.setFontHeightInPoints((short) 12);
 		style.setFont(font);
+		style.setAlignment(HorizontalAlignment.CENTER);
 	}
 
 	private static XSSFFont setFont(XSSFWorkbook workbook) {
