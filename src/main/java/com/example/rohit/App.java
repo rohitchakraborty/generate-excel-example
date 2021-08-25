@@ -37,9 +37,9 @@ public class App {
 	private static final String TABLE_STYLE = "TableStyleMedium2";
 	private static final String DATE_FORMAT = "dd-mm-yyyy";
 	private static final String NUMBER_FORMAT = "#,##0;[RED]#,##0";
-	private static final String D = "D";
-	private static final String E = "E";
-	private static final String F = "F";
+	private static final String FIRST_NUMERIC_COLUMN = "D";
+	private static final String SECOND_NUMERIC_COLUMN = "E";
+	private static final String THIRD_NUMERIC_COLUMN = "F";
 
 	private static final List<String> TABLE_HEADERS = Arrays.asList("Agreement_No.", "Project_Name", "Due_Date",
 			"Principal_Amount_(Rs.)", "Interest_Amount_(Rs.)", "Other_Charges_(Rs.)", "Total_Claim_(Rs.)");
@@ -101,11 +101,11 @@ public class App {
 			setTableStyle(table);
 
 			// Define data validation
-			var dataValidation = addDataValidation(validationHelper, rowIndex, D, 3);
+			var dataValidation = addDataValidation(validationHelper, rowIndex, FIRST_NUMERIC_COLUMN, 3);
 			sheet.addValidationData(dataValidation);
-			dataValidation = addDataValidation(validationHelper, rowIndex, E, 4);
+			dataValidation = addDataValidation(validationHelper, rowIndex, SECOND_NUMERIC_COLUMN, 4);
 			sheet.addValidationData(dataValidation);
-			dataValidation = addDataValidation(validationHelper, rowIndex, F, 5);
+			dataValidation = addDataValidation(validationHelper, rowIndex, THIRD_NUMERIC_COLUMN, 5);
 			sheet.addValidationData(dataValidation);
 
 			// Add rows and columns
@@ -136,7 +136,8 @@ public class App {
 						cell.setCellStyle(numberCellStyle);
 						if (k == TABLE_HEADERS.size() - 1) {
 							// SUM formula
-							cell.setCellFormula("SUM(" + D + (j + 1) + ":" + F + (j + 1) + ")");
+							cell.setCellFormula("SUM(" + FIRST_NUMERIC_COLUMN + (j + 1) + ":" + THIRD_NUMERIC_COLUMN
+									+ (j + 1) + ")");
 							cell.setCellType(CellType.FORMULA);
 						}
 					} else {
