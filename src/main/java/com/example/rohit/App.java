@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -11,15 +12,20 @@ import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.usermodel.XSSFBorderFormatting;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFConditionalFormattingRule;
 import org.apache.poi.xssf.usermodel.XSSFDataFormat;
 import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFName;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFSheetConditionalFormatting;
 import org.apache.poi.xssf.usermodel.XSSFTable;
 import org.apache.poi.xssf.usermodel.XSSFTableStyleInfo;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -42,7 +48,8 @@ public class App {
 	private static final String THIRD_NUMERIC_COLUMN = "F";
 
 	private static final List<String> TABLE_HEADERS = Arrays.asList("Agreement_No.", "Project_Name", "Due_Date",
-			"Principal_Amount_(Rs.)", "Interest_Amount_(Rs.)", "Other_Charges_(Rs.)", "Total_Claim_(Rs.)");
+			"Principal_Amount_(Rs.)", "Interest_Amount_(Rs.)", "Other_Charges_(Rs.)", "Total_Claim_(Rs.)", "Status",
+			"Reason", "Timestamp");
 
 	public static void main(String[] args) {
 		var workbook = new XSSFWorkbook();
@@ -51,6 +58,10 @@ public class App {
 		List<Creditor> creditors = getCreditors();
 		createMainSheet(workbook, mainSheet, creditors);
 		createCreditorTable(workbook, creditorSheet, creditors);
+		addConditionalFormatting(mainSheet);
+		addNumericConditionalFormatting(mainSheet, FIRST_NUMERIC_COLUMN);
+		addNumericConditionalFormatting(mainSheet, SECOND_NUMERIC_COLUMN);
+		addNumericConditionalFormatting(mainSheet, THIRD_NUMERIC_COLUMN);
 
 		try (var outputStream = new FileOutputStream("JavaBooks.xlsx")) {
 			workbook.write(outputStream);
@@ -70,11 +81,11 @@ public class App {
 		setMainColumnWidth(sheet);
 		XSSFDataFormat dataFormat = workbook.createDataFormat();
 		XSSFFont font = setFont(workbook);
-		XSSFCellStyle style = workbook.createCellStyle();
-		XSSFCellStyle tableRowStyle = workbook.createCellStyle();
-		XSSFCellStyle tableHeaderStyle = workbook.createCellStyle();
-		XSSFCellStyle dateCellStyle = workbook.createCellStyle();
-		XSSFCellStyle numberCellStyle = workbook.createCellStyle();
+		Map<String, XSSFCellStyle> styleMap = Map.of("style", workbook.createCellStyle(), "tableRowStyle",
+				workbook.createCellStyle(), "tableHeaderStyle", workbook.createCellStyle(), "dateCellStyle",
+				workbook.createCellStyle(), "numberCellStyle", workbook.createCellStyle(), "lockedCellStyle",
+				workbook.createCellStyle());
+		setStyles(workbook, styleMap, dataFormat, font);
 		var validationHelper = new XSSFDataValidationHelper(sheet);
 		for (int i = 0; i < creditors.size(); i++) {
 			// Creditor name row
@@ -84,10 +95,10 @@ public class App {
 			cell.setCellValue(CREDITOR);
 			cell = row.createCell(columnIndex + 1);
 			setCellFont(workbook, cell);
-			style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-			style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			setBorder(style);
-			cell.setCellStyle(style);
+			styleMap.get("style").setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+			styleMap.get("style").setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			setBorder(styleMap.get("style"));
+			cell.setCellStyle(styleMap.get("style"));
 			cell.setCellValue(creditors.get(i).getCreditorName());
 
 			// Set which area the table should be placed in
@@ -96,7 +107,6 @@ public class App {
 			XSSFTable table = sheet.createTable(reference);
 			table.getCTTable().addNewTableStyleInfo();
 			table.getCTTable().getTableStyleInfo().setName(TABLE_STYLE);
-			table.getCTTable().addNewAutoFilter().setRef(reference.formatAsString());
 			// Style the table
 			setTableStyle(table);
 
@@ -111,19 +121,9 @@ public class App {
 			// Add rows and columns
 			row = sheet.createRow(rowIndex + 1);
 			font.setFontHeightInPoints((short) 12);
-			tableRowStyle.setFont(font);
-			dateCellStyle.setFont(font);
-			numberCellStyle.setFont(font);
-			dateCellStyle.setDataFormat(dataFormat.getFormat(DATE_FORMAT));
-			numberCellStyle.setDataFormat(dataFormat.getFormat(NUMBER_FORMAT));
-			setHeaderStyle(workbook, tableHeaderStyle);
-			setBorder(tableHeaderStyle);
-			setBorder(tableRowStyle);
-			setBorder(dateCellStyle);
-			setBorder(numberCellStyle);
 			for (int j = 0; j < TABLE_HEADERS.size(); j++) {
 				cell = row.createCell(j);
-				cell.setCellStyle(tableHeaderStyle);
+				cell.setCellStyle(styleMap.get("tableHeaderStyle"));
 				cell.setCellValue(TABLE_HEADERS.get(j));
 			}
 			for (int j = rowIndex + 2; j < rowIndex + TABLE_SIZE + 1; j++) {
@@ -131,22 +131,27 @@ public class App {
 				for (int k = 0; k < TABLE_HEADERS.size(); k++) {
 					cell = row.createCell(k);
 					if (k == 2) {
-						cell.setCellStyle(dateCellStyle);
-					} else if (k > 2) {
-						cell.setCellStyle(numberCellStyle);
-						if (k == TABLE_HEADERS.size() - 1) {
+						cell.setCellStyle(styleMap.get("dateCellStyle"));
+					} else if (k > 2 && k < 7) {
+						cell.setCellStyle(styleMap.get("numberCellStyle"));
+						if (k == TABLE_HEADERS.size() - 4) {
 							// SUM formula
 							cell.setCellFormula("SUM(" + FIRST_NUMERIC_COLUMN + (j + 1) + ":" + THIRD_NUMERIC_COLUMN
 									+ (j + 1) + ")");
 							cell.setCellType(CellType.FORMULA);
 						}
+					} else if (k > 6) {
+						cell.setCellStyle(styleMap.get("lockedCellStyle"));
 					} else {
-						cell.setCellStyle(tableRowStyle);
+						cell.setCellStyle(styleMap.get("tableRowStyle"));
 					}
 				}
 			}
 			rowIndex += ROW_GAP;
 		}
+		sheet.lockSelectLockedCells(true);
+		sheet.lockAutoFilter(false);
+		sheet.enableLocking();
 	}
 
 	private static void createCreditorTable(XSSFWorkbook workbook, XSSFSheet sheet, List<Creditor> creditors) {
@@ -187,6 +192,9 @@ public class App {
 				}
 			}
 		}
+		XSSFName name = workbook.createName();
+		name.setNameName("creditorValues");
+		name.setRefersToFormula(CREDITOR + "!B2:B" + (creditors.size() + 1));
 	}
 
 	private static void setTableStyle(XSSFTable table) {
@@ -260,6 +268,74 @@ public class App {
 		sheet.setColumnWidth(4, 30 * 256);
 		sheet.setColumnWidth(5, 30 * 256);
 		sheet.setColumnWidth(6, 30 * 256);
+		sheet.setColumnWidth(7, 20 * 256);
+		sheet.setColumnWidth(8, 35 * 256);
+		sheet.setColumnWidth(9, 30 * 256);
+	}
+
+	private static void setStyles(XSSFWorkbook workbook, Map<String, XSSFCellStyle> styleMap, XSSFDataFormat dataFormat,
+			XSSFFont font) {
+		styleMap.get("tableRowStyle").setFont(font);
+		styleMap.get("dateCellStyle").setFont(font);
+		styleMap.get("numberCellStyle").setFont(font);
+		styleMap.get("lockedCellStyle").setFont(font);
+		styleMap.get("dateCellStyle").setDataFormat(dataFormat.getFormat(DATE_FORMAT));
+		styleMap.get("numberCellStyle").setDataFormat(dataFormat.getFormat(NUMBER_FORMAT));
+		setHeaderStyle(workbook, styleMap.get("tableHeaderStyle"));
+		setBorder(styleMap.get("tableHeaderStyle"));
+		setBorder(styleMap.get("tableRowStyle"));
+		setBorder(styleMap.get("dateCellStyle"));
+		setBorder(styleMap.get("numberCellStyle"));
+		setBorder(styleMap.get("lockedCellStyle"));
+		styleMap.get("tableRowStyle").setLocked(false);
+		styleMap.get("dateCellStyle").setLocked(false);
+		styleMap.get("numberCellStyle").setLocked(false);
+	}
+
+	private static void addConditionalFormatting(XSSFSheet sheet) {
+		var rowIndex = 0;
+		List<XSSFTable> tables = sheet.getTables();
+		for (var i = 0; i < tables.size(); i++) {
+			XSSFSheetConditionalFormatting conditionalFormatting = sheet.getSheetConditionalFormatting();
+			XSSFConditionalFormattingRule rule = conditionalFormatting.createConditionalFormattingRule(
+					"=ISBLANK(B" + (rowIndex + 3) + ":B" + (rowIndex + TABLE_SIZE + 1) + ")");
+			XSSFBorderFormatting borderFormatting = rule.createBorderFormatting();
+			borderFormatting.setBorderBottom(BorderStyle.THIN);
+			borderFormatting.setBottomBorderColor(IndexedColors.RED.getIndex());
+			borderFormatting.setBorderRight(BorderStyle.THIN);
+			borderFormatting.setRightBorderColor(IndexedColors.RED.getIndex());
+			borderFormatting.setBorderLeft(BorderStyle.THIN);
+			borderFormatting.setLeftBorderColor(IndexedColors.RED.getIndex());
+//			borderFormatting.setBorderTop(BorderStyle.THIN);
+//			borderFormatting.setTopBorderColor(IndexedColors.RED.getIndex());
+			CellRangeAddress[] regions = {
+					CellRangeAddress.valueOf("B" + (rowIndex + 3) + ":B" + (rowIndex + TABLE_SIZE + 1)) };
+			conditionalFormatting.addConditionalFormatting(regions, rule);
+			rowIndex += ROW_GAP;
+		}
+	}
+	
+	private static void addNumericConditionalFormatting(XSSFSheet sheet, String columnRef) {
+		var rowIndex = 0;
+		List<XSSFTable> tables = sheet.getTables();
+		for (var i = 0; i < tables.size(); i++) {
+			XSSFSheetConditionalFormatting conditionalFormatting = sheet.getSheetConditionalFormatting();
+			XSSFConditionalFormattingRule rule = conditionalFormatting.createConditionalFormattingRule(
+					"=AND(D" + (rowIndex + 3) + "=\"\", E" + (rowIndex + 3) + "=\"\", F" + (rowIndex + 3) + "=\"\")");
+			XSSFBorderFormatting borderFormatting = rule.createBorderFormatting();
+			borderFormatting.setBorderBottom(BorderStyle.THIN);
+			borderFormatting.setBottomBorderColor(IndexedColors.RED.getIndex());
+			borderFormatting.setBorderRight(BorderStyle.THIN);
+			borderFormatting.setRightBorderColor(IndexedColors.RED.getIndex());
+			borderFormatting.setBorderLeft(BorderStyle.THIN);
+			borderFormatting.setLeftBorderColor(IndexedColors.RED.getIndex());
+//			borderFormatting.setBorderTop(BorderStyle.THIN);
+//			borderFormatting.setTopBorderColor(IndexedColors.RED.getIndex());
+			CellRangeAddress[] regions = {
+					CellRangeAddress.valueOf(columnRef + (rowIndex + 3) + ":" + columnRef + (rowIndex + TABLE_SIZE + 1)) };
+			conditionalFormatting.addConditionalFormatting(regions, rule);
+			rowIndex += ROW_GAP;
+		}
 	}
 
 }
